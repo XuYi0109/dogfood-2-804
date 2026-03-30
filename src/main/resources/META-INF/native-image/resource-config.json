@@ -1,0 +1,13 @@
+{
+  "resources": {
+    "includes": [
+      {
+        "pattern": "models/.*\\.onnx"
+      },
+      {
+        "pattern": "application\\.properties"
+      }
+    ]
+  },
+  "bundles": []
+}

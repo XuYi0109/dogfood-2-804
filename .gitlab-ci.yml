@@ -1,0 +1,73 @@
+image: maven:3.9.6-eclipse-temurin-17
+
+stages:
+  - build
+  - test
+  - package
+  - docker
+
+variables:
+  MAVEN_CLI_OPTS: "-s .m2/settings.xml --batch-mode"
+  MAVEN_OPTS: "-Dmaven.repo.local=.m2/repository"
+
+cache:
+  paths:
+    - .m2/repository/
+
+before_script:
+  - apt-get update && apt-get install -y python3 python3-pip
+  - pip3 install --break-system-packages -r scripts/requirements.txt
+  - cd scripts && python3 train_model.py && cd ..
+
+build:
+  stage: build
+  script:
+    - mvn $MAVEN_CLI_OPTS compile
+
+test:
+  stage: test
+  script:
+    - mvn $MAVEN_CLI_OPTS test
+  artifacts:
+    when: always
+    reports:
+      junit:
+        - target/surefire-reports/TEST-*.xml
+
+package-jvm:
+  stage: package
+  script:
+    - mvn $MAVEN_CLI_OPTS package -DskipTests
+  artifacts:
+    paths:
+      - target/quarkus-app/
+    expire_in: 1 week
+
+package-native:
+  stage: package
+  image: ghcr.io/graalvm/graalvm-community:17
+  before_script:
+    - gu install native-image
+    - apt-get update && apt-get install -y python3 python3-pip
+    - pip3 install --break-system-packages -r scripts/requirements.txt
+    - cd scripts && python3 train_model.py && cd ..
+  script:
+    - ./mvnw package -Dnative
+  artifacts:
+    paths:
+      - target/*-runner
+    expire_in: 1 week
+  only:
+    - main
+
+docker-build:
+  stage: docker
+  image: docker:latest
+  services:
+    - docker:dind
+  script:
+    - docker build -f src/main/docker/Dockerfile.jvm -t $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA .
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker push $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA
+  only:
+    - main
