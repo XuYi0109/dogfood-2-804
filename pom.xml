@@ -14,6 +14,10 @@
     <skipITs>true</skipITs>
     <surefire-plugin.version>3.2.5</surefire-plugin.version>
     <rest-assured.version>5.4.0</rest-assured.version>
+    <pmml.version>1.6.4</pmml.version>
+    <pmml.evaluator.version>1.5.16</pmml.evaluator.version>
+    <onnxruntime.version>1.16.3</onnxruntime.version>
+    <apache.commons.math3.version>3.6.1</apache.commons.math3.version>
   </properties>
   <dependencyManagement>
     <dependencies>
@@ -58,6 +62,47 @@
       <artifactId>rest-assured</artifactId>
       <version>${rest-assured.version}</version>
       <scope>test</scope>
+    </dependency>
+    
+    <!-- PMML Model Support for scikit-learn -->
+    <dependency>
+      <groupId>org.jpmml</groupId>
+      <artifactId>pmml-model</artifactId>
+      <version>${pmml.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.jpmml</groupId>
+      <artifactId>pmml-evaluator</artifactId>
+      <version>${pmml.evaluator.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.jpmml</groupId>
+      <artifactId>pmml-evaluator-extension</artifactId>
+      <version>${pmml.evaluator.version}</version>
+    </dependency>
+    
+    <!-- ONNX Runtime Support (alternative for scikit-learn models) -->
+    <dependency>
+      <groupId>com.microsoft.onnxruntime</groupId>
+      <artifactId>onnxruntime</artifactId>
+      <version>${onnxruntime.version}</version>
+    </dependency>
+    
+    <!-- Apache Commons Math for additional mathematical operations -->
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-math3</artifactId>
+      <version>${apache.commons.math3.version}</version>
+    </dependency>
+    
+    <!-- JSON Processing for model input/output -->
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-core</artifactId>
     </dependency>
   </dependencies>
   <build>
