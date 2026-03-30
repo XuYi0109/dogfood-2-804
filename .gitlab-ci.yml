@@ -1,0 +1,146 @@
+stages:
+  - build
+  - test
+  - package
+  - validate
+  - deploy
+
+variables:
+  MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository"
+  MAVEN_CLI_OPTS: "--batch-mode --errors --fail-at-end --show-version"
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: ""
+
+cache:
+  paths:
+    - .m2/repository
+
+build:
+  stage: build
+  image: eclipse-temurin:17-jdk
+  script:
+    - ./mvnw $MAVEN_CLI_OPTS clean compile
+  artifacts:
+    paths:
+      - target/
+    expire_in: 1 hour
+
+test:
+  stage: test
+  image: eclipse-temurin:17-jdk
+  script:
+    - ./mvnw $MAVEN_CLI_OPTS test
+  artifacts:
+    reports:
+      junit:
+        - target/surefire-reports/TEST-*.xml
+    paths:
+      - target/surefire-reports/
+    expire_in: 1 week
+
+integration-test:
+  stage: test
+  image: eclipse-temurin:17-jdk
+  script:
+    - ./mvnw $MAVEN_CLI_OPTS verify
+  dependencies:
+    - build
+
+package-jvm:
+  stage: package
+  image: eclipse-temurin:17-jdk
+  script:
+    - ./mvnw $MAVEN_CLI_OPTS package -DskipTests
+  artifacts:
+    paths:
+      - target/quarkus-app/
+    expire_in: 1 week
+  only:
+    - main
+    - develop
+
+package-native:
+  stage: package
+  image: quay.io/quarkus/ubi-quarkus-mandrel-builder-image:jdk-17
+  script:
+    - ./mvnw $MAVEN_CLI_OPTS package -Dnative -DskipTests -Dquarkus.native.native-image-xmx=4g
+  artifacts:
+    paths:
+      - target/*-runner
+    expire_in: 1 week
+  only:
+    - main
+  allow_failure: true
+
+docker-build-jvm:
+  stage: package
+  image: docker:latest
+  services:
+    - docker:dind
+  script:
+    - docker build --target jvm -t $CI_REGISTRY_IMAGE:jvm-$CI_COMMIT_SHA .
+    - docker build --target jvm -t $CI_REGISTRY_IMAGE:jvm-latest .
+  only:
+    - main
+    - develop
+
+docker-build-native:
+  stage: package
+  image: docker:latest
+  services:
+    - docker:dind
+  script:
+    - docker build -f Dockerfile.native -t $CI_REGISTRY_IMAGE:native-$CI_COMMIT_SHA .
+    - docker build -f Dockerfile.native -t $CI_REGISTRY_IMAGE:native-latest .
+  only:
+    - main
+  allow_failure: true
+
+model-validation:
+  stage: validate
+  image: eclipse-temurin:17-jre
+  script:
+    - java -jar target/quarkus-app/quarkus-run.jar &
+    - sleep 15
+    - |
+      echo "Running model validation tests..."
+
+      # Health check
+      curl -f http://localhost:8080/health/ready || exit 1
+      echo "✓ Health check passed"
+
+      # List models
+      curl -f http://localhost:8080/api/v1/models || exit 1
+      echo "✓ List models passed"
+
+      # Validate mock model
+      curl -f -X POST http://localhost:8080/api/v1/models/mock-model/validate || exit 1
+      echo "✓ Model validation passed"
+
+      # Test prediction
+      curl -f -X POST http://localhost:8080/api/v1/models/mock-model/predict \
+        -H "Content-Type: application/json" \
+        -d '{"data":[{"feature1":1.0,"feature2":2.0,"feature3":3.0}]}' || exit 1
+      echo "✓ Prediction test passed"
+
+      # Validate all models
+      curl -f -X POST http://localhost:8080/api/v1/models/validate-all || exit 1
+      echo "✓ All models validation passed"
+
+      echo "All model validation tests passed!"
+  dependencies:
+    - package-jvm
+  only:
+    - main
+    - develop
+
+cicd-integration-test:
+  stage: validate
+  image: eclipse-temurin:17-jdk
+  script:
+    - ./mvnw $MAVEN_CLI_OPTS test -Dtest=CICDIntegrationTest
+  dependencies:
+    - build
+  only:
+    - main
+    - develop

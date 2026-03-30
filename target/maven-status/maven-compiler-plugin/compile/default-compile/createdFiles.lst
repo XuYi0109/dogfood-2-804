@@ -1,0 +1,10 @@
+com\mlops\model\validator\resource\ModelResource.class
+com\mlops\model\validator\service\ModelEngine.class
+com\mlops\model\validator\entity\PredictionRequest.class
+com\mlops\model\validator\service\MockModelEngine.class
+com\mlops\model\validator\entity\HealthStatus.class
+com\mlops\model\validator\entity\ModelMetadata.class
+com\mlops\model\validator\entity\ValidationResult.class
+com\mlops\model\validator\service\ModelService.class
+com\mlops\model\validator\entity\PredictionResponse.class
+com\mlops\model\validator\resource\HealthResource.class

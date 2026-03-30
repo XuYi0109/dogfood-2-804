@@ -1,0 +1,3 @@
+com\mlops\model\validator\CICDIntegrationTest.class
+com\mlops\model\validator\ModelResourceTest.class
+com\mlops\model\validator\HealthResourceTest.class
